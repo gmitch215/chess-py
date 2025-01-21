@@ -2,6 +2,7 @@
 __pycache__/
 *.py[cod]
 *$py.class
+src/log.txt
 
 # C extensions
 *.so
