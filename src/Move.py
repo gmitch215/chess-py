@@ -27,10 +27,8 @@ class Move:
         self.newPos = newPos
         self.pieceToCapture = pieceToCapture
         # For en passant and castling
-        # TODO: specialMovePiece should be a 'Piece' type to satisfy mypy
         self.specialMovePiece = None
         # For castling
-        # TODO: rookMove should be a 'Move' type to satisfy mypy
         self.rookMove = None
 
     def __str__(self) -> str:

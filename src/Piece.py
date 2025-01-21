@@ -38,18 +38,22 @@ class Piece:
     def movesInDirectionFromPos(
             self, pos: C, direction: C, side: bool,
     ) -> Iterator[Move]:
-        for dis in range(1, 8):
+        # Generate moves in a specific direction from a given position
+        for dis in range(1, 8):  # Loop through all possible distances (1-7)
+            # Calculate movement vector based on direction and distance
             movement = C(dis * direction[X], dis * direction[Y])
-            newPos = pos + movement
-            if self.board.isValidPos(newPos):
+            newPos = pos + movement  # Calculate new position
+            
+            if self.board.isValidPos(newPos):  # Check if new position is valid
                 pieceAtNewPos = self.board.pieceAtPosition(newPos)
                 if pieceAtNewPos is None:
+                    # If square is empty, add move
                     yield Move(self, newPos)
-
                 elif pieceAtNewPos is not None:
                     if pieceAtNewPos.side != side:
+                        # If enemy piece found, add capture move and stop
                         yield Move(self, newPos, pieceToCapture=pieceAtNewPos)
-                    return
+                    return  # Stop searching in this direction after finding any piece
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Piece):
