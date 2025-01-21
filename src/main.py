@@ -32,7 +32,6 @@ def askForDepthOfAI() -> int:
         depthInput = int(
             input(
                 'How deep should the AI look for moves?\n'
-                'Warning : values above 3 will be very slow.'
                 ' [2]? ',
             ),
         )
@@ -40,7 +39,6 @@ def askForDepthOfAI() -> int:
             depthInput = int(
                 input(
                     'How deep should the AI look for moves?\n'
-                    'Warning : values above 3 will be very slow. '
                     'Your input must be above 0.'
                     ' [2]? ',
                 ),
