@@ -63,38 +63,14 @@ class AI:
             self.populateNodeChildren(node.children[-1])
             self.board.undoLastMove()
 
-    def getOptimalPointAdvantageForNode(self, node: MoveNode) -> int:
-        if node.children:
-            for child in node.children:
-                child.pointAdvantage = self.getOptimalPointAdvantageForNode(
-                    child,
-                )
-
-            # If the depth is divisible by 2,
-            # it's a move for the AI's side, so return max
-            if node.children[0].depth % 2 == 1:
-                return max(node.children).pointAdvantage
-            else:
-                return min(node.children).pointAdvantage
-        else:
-            return node.pointAdvantage
-
-    def getBestMove(self) -> Move:
-        moveTree = self.generateMoveTree()
-        bestMoves = self.bestMovesWithMoveTree(moveTree)
-        randomBestMove = random.choice(bestMoves)
-        randomBestMove.notation = self.parser.notationForMove(randomBestMove)
-        return randomBestMove
-
-    def makeBestMove(self) -> None:
-        self.board.makeMove(self.getBestMove())
-
     def bestMovesWithMoveTree(self, moveTree: list[MoveNode]) -> list[Move]:
         bestMoveNodes: list[MoveNode] = []
+        alpha = float('-inf')
+        beta = float('inf')
+        
         for moveNode in moveTree:
-            moveNode.pointAdvantage = self.getOptimalPointAdvantageForNode(
-                moveNode,
-            )
+            moveNode.pointAdvantage = self.minimax(moveNode, self.depth, alpha, beta, True)
+            
             if not bestMoveNodes:
                 bestMoveNodes.append(moveNode)
             elif moveNode > bestMoveNodes[0]:
@@ -104,6 +80,89 @@ class AI:
                 bestMoveNodes.append(moveNode)
 
         return [node.move for node in bestMoveNodes]
+
+    def minimax(self, node: MoveNode, depth: int, alpha: float, beta: float, maximizingPlayer: bool) -> int:
+        if depth == 0 or not node.children:
+            return self.evaluatePosition(node)
+        
+        if maximizingPlayer:
+            maxEval = float('-inf')
+            for child in node.children:
+                eval = self.minimax(child, depth - 1, alpha, beta, False)
+                maxEval = max(maxEval, eval)
+                alpha = max(alpha, eval)
+                if beta <= alpha:
+                    break
+            return maxEval
+        else:
+            minEval = float('inf')
+            for child in node.children:
+                eval = self.minimax(child, depth - 1, alpha, beta, True)
+                minEval = min(minEval, eval)
+                beta = min(beta, eval)
+                if beta <= alpha:
+                    break
+            return minEval
+
+    def evaluatePosition(self, node: MoveNode) -> int:
+        score = node.pointAdvantage
+        
+        # Bonus for controlling center
+        if node.move.newPos[0] in [3,4] and node.move.newPos[1] in [3,4]:
+            score += 0.5
+            
+        # Bonus for development in opening
+        old_pos = self.board.pieceAtPosition(node.move.oldPos)
+        if node.depth < 10 and (old_pos is None or old_pos.stringRep != 'P'):
+            score += 0.3
+            
+        # Penalty for moving same piece twice in opening
+        moves_to_check = min(node.depth, len(self.board.history))
+        if node.depth < 10 and node.move.piece in [m[0].piece for m in self.board.history[-moves_to_check:] if m[0].piece]:
+            score -= 0.2
+            
+        return int(score * 100)
+
+    def getBestMove(self) -> Move:
+        moveTree = self.generateMoveTree()
+        bestMoves = self.bestMovesWithMoveTree(moveTree)
+        
+        # Filter moves that lead to checkmate first
+        checkmateMoves = [move for move in bestMoves if move.checkmate]
+        if checkmateMoves:
+            bestMove = random.choice(checkmateMoves)
+            bestMove.notation = self.parser.notationForMove(bestMove)
+            return bestMove
+            
+        # Consider positional factors for other moves
+        scoredMoves = []
+        for move in bestMoves:
+            score = 0
+            
+            # Prefer moves that control the center
+            if move.newPos[0] in [3,4] and move.newPos[1] in [3,4]:
+                score += 1
+                
+            # Prefer moves that develop pieces in opening
+            if self.board.movesMade < 10 and move.piece.stringRep in ['N','B']:
+                score += 1
+                
+            # Discourage moving pieces multiple times in opening
+            if self.board.movesMade < 10 and any(move.piece == m[0].piece for m in self.board.history):
+                score -= 1
+                
+            scoredMoves.append((move, score))
+            
+        # Get moves with highest score
+        maxScore = max(score for _, score in scoredMoves)
+        bestMoves = [move for move, score in scoredMoves if score == maxScore]
+        
+        bestMove = random.choice(bestMoves)
+        bestMove.notation = self.parser.notationForMove(bestMove)
+        return bestMove
+
+    def makeBestMove(self) -> None:
+        self.board.makeMove(self.getBestMove())
 
 
 if __name__ == '__main__':
